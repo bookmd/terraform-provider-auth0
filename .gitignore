@@ -46,3 +46,4 @@ override.tf.json
 # Environment
 .env
 .envrc
+.claude/settings.local.json
