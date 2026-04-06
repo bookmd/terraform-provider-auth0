@@ -54,6 +54,22 @@ func NewResource() *schema.Resource {
 				Computed:    true,
 				Description: "The ID of the client.",
 			},
+			"external_client_id": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The URL of the Client ID Metadata Document. Only present for CIMD-registered clients.",
+			},
+			"external_metadata_type": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Type of external metadata. Value is `cimd` for CIMD-registered clients.",
+			},
+			"external_metadata_created_by": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Who created the external metadata client: `admin` (via Management API), " +
+					"`client` (self-registered), or `unknown`.",
+			},
 			"client_aliases": {
 				Type: schema.TypeList,
 				Elem: &schema.Schema{
