@@ -77,7 +77,7 @@ resource "auth0_guardian" "my_guardian" {
 - `duo` (Block List, Max: 1) Configuration settings for the Duo MFA. If this block is present, Duo MFA will be enabled, and disabled otherwise. (see [below for nested schema](#nestedblock--duo))
 - `email` (Boolean) Indicates whether email MFA is enabled.
 - `otp` (Boolean) Indicates whether one time password MFA is enabled.
-- `phone` (Block List, Max: 1) Configuration settings for the phone MFA. If this block is present, Phone MFA will be enabled, and disabled otherwise. (see [below for nested schema](#nestedblock--phone))
+- `phone` (Block List, Max: 1, Deprecated) Configuration settings for the phone MFA. If this block is present, Phone MFA will be enabled, and disabled otherwise. (see [below for nested schema](#nestedblock--phone))
 - `push` (Block List, Max: 1) Configuration settings for the Push MFA. If this block is present, Push MFA will be enabled, and disabled otherwise. (see [below for nested schema](#nestedblock--push))
 - `recovery_code` (Boolean) Indicates whether recovery code MFA is enabled.
 - `webauthn_platform` (Block List, Max: 1) Configuration settings for the WebAuthn with FIDO Device Biometrics MFA. If this block is present, WebAuthn with FIDO Device Biometrics MFA will be enabled, and disabled otherwise. (see [below for nested schema](#nestedblock--webauthn_platform))

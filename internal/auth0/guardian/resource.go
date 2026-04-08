@@ -123,6 +123,8 @@ func NewResource() *schema.Resource {
 				Optional: true,
 				Computed: true,
 				MaxItems: 1,
+				Deprecated: "If `phone_consolidated_experience` is enabled on the tenant, " +
+					"use the `auth0_phone_provider` resource instead.",
 				Description: "Configuration settings for the phone MFA. If this block is present, " +
 					"Phone MFA will be enabled, and disabled otherwise.",
 				Elem: &schema.Resource{
@@ -430,6 +432,11 @@ func readGuardian(ctx context.Context, data *schema.ResourceData, meta interface
 		return diag.FromErr(err)
 	}
 
+	phoneConsolidated, err := isPhoneConsolidatedExperience(ctx, api)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
 	for _, factor := range multiFactorList {
 		switch factor.GetName() {
 		case "email":
@@ -439,6 +446,12 @@ func readGuardian(ctx context.Context, data *schema.ResourceData, meta interface
 		case "recovery-code":
 			result = multierror.Append(result, data.Set("recovery_code", factor.GetEnabled()))
 		case "sms":
+			if phoneConsolidated {
+				// Skip reading phone config via deprecated Guardian APIs.
+				// Phone is now managed by the auth0_phone_provider resource.
+				break
+			}
+
 			phone, err := flattenPhone(ctx, factor.GetEnabled(), api)
 			if err != nil {
 				return diag.FromErr(err)
@@ -503,9 +516,13 @@ func updateGuardian(ctx context.Context, data *schema.ResourceData, meta interfa
 func deleteGuardian(ctx context.Context, _ *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	api := meta.(*config.Config).GetAPI()
 
+	phoneConsolidated, err := isPhoneConsolidatedExperience(ctx, api)
+	if err != nil {
+		return diag.FromErr(err)
+	}
+
 	result := multierror.Append(
 		api.Guardian.MultiFactor.UpdatePolicy(ctx, &management.MultiFactorPolicies{}),
-		api.Guardian.MultiFactor.Phone.Enable(ctx, false),
 		api.Guardian.MultiFactor.Email.Enable(ctx, false),
 		api.Guardian.MultiFactor.OTP.Enable(ctx, false),
 		api.Guardian.MultiFactor.RecoveryCode.Enable(ctx, false),
@@ -515,5 +532,21 @@ func deleteGuardian(ctx context.Context, _ *schema.ResourceData, meta interface{
 		api.Guardian.MultiFactor.Push.Enable(ctx, false),
 	)
 
+	if !phoneConsolidated {
+		// Only disable phone via deprecated Guardian API if the tenant
+		// has not migrated. Otherwise phone is managed by auth0_phone_provider.
+		result = multierror.Append(result, api.Guardian.MultiFactor.Phone.Enable(ctx, false))
+	}
+
 	return diag.FromErr(result.ErrorOrNil())
+}
+
+// isPhoneConsolidatedExperience returns true if Unified Phone Experience is enabled for the tenant.
+func isPhoneConsolidatedExperience(ctx context.Context, api *management.Management) (bool, error) {
+	tenant, err := api.Tenant.Read(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	return tenant.GetPhoneConsolidatedExperience(), nil
 }
