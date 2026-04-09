@@ -60,6 +60,12 @@ func NewCIMDResource() *schema.Resource {
 				Computed:    true,
 				Description: "Who created the client: `admin` (Management API) or `client` (self-registered).",
 			},
+			"jwks_uri": {
+				Type:     schema.TypeString,
+				Computed: true,
+				Description: "URL for the JSON Web Key Set (JWKS) containing the public keys used for " +
+					"`private_key_jwt` authentication. Only present for CIMD clients using `private_key_jwt` authentication.",
+			},
 		},
 	}
 }
@@ -120,6 +126,7 @@ func flattenCIMDClient(data *schema.ResourceData, client *managementv2.GetClient
 		data.Set("external_client_id", client.GetExternalClientID()),
 		data.Set("external_metadata_type", string(client.GetExternalMetadataType())),
 		data.Set("external_metadata_created_by", string(client.GetExternalMetadataCreatedBy())),
+		data.Set("jwks_uri", client.GetJwksURI()),
 	)
 
 	return result.ErrorOrNil()

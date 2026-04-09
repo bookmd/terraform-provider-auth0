@@ -70,6 +70,12 @@ func NewResource() *schema.Resource {
 				Description: "Who created the external metadata client: `admin` (via Management API), " +
 					"`client` (self-registered), or `unknown`.",
 			},
+			"jwks_uri": {
+				Type:     schema.TypeString,
+				Computed: true,
+				Description: "URL for the JSON Web Key Set (JWKS) containing the public keys used for " +
+					"`private_key_jwt` authentication. Only present for CIMD clients using `private_key_jwt` authentication.",
+			},
 			"client_aliases": {
 				Type: schema.TypeList,
 				Elem: &schema.Schema{

@@ -103,3 +103,5 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace github.com/auth0/go-auth0/v2 => ../go-auth0-cimd

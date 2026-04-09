@@ -669,6 +669,7 @@ func flattenClient(data *schema.ResourceData, client *management.Client) error {
 		data.Set("external_client_id", client.GetExternalClientID()),
 		data.Set("external_metadata_type", client.GetExternalMetadataType()),
 		data.Set("external_metadata_created_by", client.GetExternalMetadataCreatedBy()),
+		data.Set("jwks_uri", client.GetJwksURI()),
 	)
 
 	if client.EncryptionKey != nil && len(*client.EncryptionKey) == 0 {
