@@ -105,8 +105,7 @@ func NewResource() *schema.Resource {
 				Type:     schema.TypeBool,
 				Optional: true,
 				Computed: true,
-				Description: "Indicates whether this client is a first-party client." +
-					"Defaults to true from the API",
+				Description: "Indicates whether this client is a first-party client.",
 			},
 			"is_token_endpoint_ip_header_trusted": {
 				Type:     schema.TypeBool,
