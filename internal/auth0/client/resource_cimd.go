@@ -47,8 +47,6 @@ func cimdClientSchema() map[string]*schema.Schema {
 		"app_type":                       true,
 		"description":                    true,
 		"oidc_conformant":                true,
-		"organization_usage":             true,
-		"organization_require_behavior":  true,
 		"organization_discovery_methods": true,
 		"web_origins":                    true,
 		"grant_types":                    true,
@@ -104,13 +102,17 @@ func cimdClientSchema() map[string]*schema.Schema {
 	jwtSub["alg"].Description = "Algorithm used to sign JWTs. " +
 		"CIMD clients support `RS256`, `RS512`, and `PS256` (asymmetric only)."
 
-	// refresh_token: only these 5 sub-fields are PATCHable.
+	// refresh_token: 5 sub-fields are PATCHable. expiration_type and
+	// infinite_idle_token_lifetime are fixed-value for Strict 3P ("expiring"
+	// and false) but the API requires them when refresh_token is in the PATCH.
 	rtEditable := map[string]bool{
-		"rotation_type":           true,
-		"leeway":                  true,
-		"token_lifetime":          true,
-		"infinite_token_lifetime": true,
-		"idle_token_lifetime":     true,
+		"rotation_type":                true,
+		"leeway":                       true,
+		"token_lifetime":               true,
+		"infinite_token_lifetime":      true,
+		"idle_token_lifetime":          true,
+		"expiration_type":              true,
+		"infinite_idle_token_lifetime": true,
 	}
 	rtSub := base["refresh_token"].Elem.(*schema.Resource).Schema
 	for key, s := range rtSub {
@@ -118,10 +120,14 @@ func cimdClientSchema() map[string]*schema.Schema {
 			makeSchemaReadOnly(s)
 		}
 	}
-	// rotation_type is Required in auth0_client but Optional for CIMD
+	// rotation_type and expiration_type are Required in auth0_client but
+	// Optional for CIMD (server sets defaults from CIMD metadata).
 	rtSub["rotation_type"].Required = false
 	rtSub["rotation_type"].Optional = true
 	rtSub["rotation_type"].Computed = true
+	rtSub["expiration_type"].Required = false
+	rtSub["expiration_type"].Optional = true
+	rtSub["expiration_type"].Computed = true
 
 	return base
 }

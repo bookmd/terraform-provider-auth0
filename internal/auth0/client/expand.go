@@ -262,6 +262,10 @@ func expandClientRefreshToken(data *schema.ResourceData) *management.ClientRefre
 }
 
 func expandRefreshTokenPolicies(policies cty.Value) *[]management.ClientRefreshTokenPolicy {
+	if policies.IsNull() {
+		return nil
+	}
+
 	clientRefreshTokenPolicy := make([]management.ClientRefreshTokenPolicy, 0)
 
 	policies.ForEachElement(func(_ cty.Value, dep cty.Value) (stop bool) {

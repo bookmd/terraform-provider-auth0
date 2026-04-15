@@ -75,7 +75,7 @@ func flattenClientRefreshTokenConfiguration(refreshToken *management.ClientRefre
 }
 
 func flattenRefreshTokenPolicies(policies []management.ClientRefreshTokenPolicy) []interface{} {
-	var result []interface{}
+	result := make([]interface{}, 0)
 
 	for _, policy := range policies {
 		result = append(result, map[string]interface{}{
@@ -672,9 +672,11 @@ func flattenClient(data *schema.ResourceData, client *management.Client) error {
 		data.Set("jwks_uri", client.GetJwksURI()),
 	)
 
-	if client.EncryptionKey != nil && len(*client.EncryptionKey) == 0 {
-		result = multierror.Append(result, data.Set("encryption_key", client.GetEncryptionKey()))
+	encKey := client.GetEncryptionKey()
+	if encKey == nil {
+		encKey = map[string]string{}
 	}
+	result = multierror.Append(result, data.Set("encryption_key", encKey))
 
 	return result.ErrorOrNil()
 }
