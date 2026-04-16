@@ -85,7 +85,7 @@ func cimdClientSchema() map[string]*schema.Schema {
 	base["app_type"].Description = "Type of application the client represents. " +
 		"CIMD clients only support `native`, `spa`, and `regular_web`."
 
-	// jwt_configuration: only lifetime_in_seconds and alg are PATCHable.
+	// The jwt_configuration: only lifetime_in_seconds and alg are PATCHable.
 	jwtEditable := map[string]bool{
 		"lifetime_in_seconds": true,
 		"alg":                 true,
@@ -102,7 +102,7 @@ func cimdClientSchema() map[string]*schema.Schema {
 	jwtSub["alg"].Description = "Algorithm used to sign JWTs. " +
 		"CIMD clients support `RS256`, `RS512`, and `PS256` (asymmetric only)."
 
-	// refresh_token: 5 sub-fields are PATCHable. expiration_type and
+	// The refresh_token has 5 sub-fields are PATCHable. The expiration_type and
 	// infinite_idle_token_lifetime are fixed-value for Strict 3P ("expiring"
 	// and false) but the API requires them when refresh_token is in the PATCH.
 	rtEditable := map[string]bool{
@@ -120,7 +120,7 @@ func cimdClientSchema() map[string]*schema.Schema {
 			makeSchemaReadOnly(s)
 		}
 	}
-	// rotation_type and expiration_type are Required in auth0_client but
+	// The rotation_type and expiration_type are Required in auth0_client but
 	// Optional for CIMD (server sets defaults from CIMD metadata).
 	rtSub["rotation_type"].Required = false
 	rtSub["rotation_type"].Optional = true
@@ -185,7 +185,7 @@ func createCIMDClient(ctx context.Context, data *schema.ResourceData, meta any) 
 		return diag.FromErr(err)
 	}
 
-	// expandClient sets TokenEndpointAuthMethod when IsNewResource() is true
+	// The expandClient sets TokenEndpointAuthMethod when IsNewResource() is true
 	// TokenEndpointAuthMethod is a CIMD-blocked field. We clear it here
 	// rather than modifying expandClient to avoid coupling expand.go to
 	// CIMD-specific logic.
