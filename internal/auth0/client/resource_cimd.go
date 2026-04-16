@@ -19,7 +19,7 @@ func NewCIMDResource() *schema.Resource {
 		CreateContext: createCIMDClient,
 		ReadContext:   readClient,
 		UpdateContext: updateClient,
-		DeleteContext: deleteCIMDClient,
+		DeleteContext: deleteClient,
 		Importer: &schema.ResourceImporter{
 			StateContext: importCIMDClient,
 		},
@@ -200,16 +200,6 @@ func createCIMDClient(ctx context.Context, data *schema.ResourceData, meta any) 
 	}
 
 	return readClient(ctx, data, meta)
-}
-
-func deleteCIMDClient(ctx context.Context, data *schema.ResourceData, meta any) diag.Diagnostics {
-	apiv2 := meta.(*config.Config).GetAPIV2()
-
-	if err := apiv2.Clients.Delete(ctx, data.Id()); err != nil {
-		return diag.FromErr(err)
-	}
-
-	return nil
 }
 
 func importCIMDClient(ctx context.Context, data *schema.ResourceData, meta any) ([]*schema.ResourceData, error) {
