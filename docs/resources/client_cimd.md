@@ -31,8 +31,6 @@ Requires the `client_id_metadata_document_supported` tenant setting to be enable
 - `jwt_configuration` (Block List, Max: 1) Configuration settings for the JWTs issued for this client. (see [below for nested schema](#nestedblock--jwt_configuration))
 - `oidc_conformant` (Boolean) Indicates whether this client will conform to strict OIDC specifications.
 - `organization_discovery_methods` (List of String) Methods for discovering organizations during the pre_login_prompt. Can include `email` (allows users to find their organization by entering their email address) and/or `organization_name` (requires users to enter the organization name directly). These methods can be combined. Setting this property requires that `organization_require_behavior` is set to `pre_login_prompt`.
-- `organization_require_behavior` (String) Defines how to proceed during an authentication transaction when `organization_usage = "require"`. Can be `no_prompt` (default), `pre_login_prompt` or  `post_login_prompt`.
-- `organization_usage` (String) Defines how to proceed during an authentication transaction with regards to an organization. Can be `deny` (default), `allow` or `require`.
 - `refresh_token` (Block List, Max: 1) Configuration settings for the refresh tokens issued for this client. (see [below for nested schema](#nestedblock--refresh_token))
 - `require_proof_of_possession` (Boolean) Makes the use of Proof-of-Possession mandatory for this client.
 - `skip_non_verifiable_callback_uri_confirmation_prompt` (String) Indicates whether the confirmation prompt appears when using non-verifiable callback URIs. Set to true to skip the prompt, false to show it, or null to unset. Accepts (true/false/null) or ("true"/"false"/"null")
@@ -69,6 +67,8 @@ Requires the `client_id_metadata_document_supported` tenant setting to be enable
 - `native_social_login` (List of Object) Configuration settings to toggle native social login for mobile native applications. Once this is set it must stay set, with both resources set to `false` in order to change the `app_type`. (see [below for nested schema](#nestedatt--native_social_login))
 - `oidc_backchannel_logout_urls` (Set of String, Deprecated) Set of URLs that are valid to call back from Auth0 for OIDC backchannel logout. Currently only one URL is allowed.
 - `oidc_logout` (List of Object) Configure OIDC logout for the Client (see [below for nested schema](#nestedatt--oidc_logout))
+- `organization_require_behavior` (String) Defines how to proceed during an authentication transaction when `organization_usage = "require"`. Can be `no_prompt` (default), `pre_login_prompt` or  `post_login_prompt`.
+- `organization_usage` (String) Defines how to proceed during an authentication transaction with regards to an organization. Can be `deny` (default), `allow` or `require`.
 - `require_pushed_authorization_requests` (Boolean) Makes the use of Pushed Authorization Requests mandatory for this client. This feature currently needs to be enabled on the tenant in order to make use of it.
 - `resource_server_identifier` (String) The identifier of a resource server that client is associated withThis property can be sent only when app_type=resource_server.This property can not be changed, once the client is created.
 - `session_transfer` (List of Object) (see [below for nested schema](#nestedatt--session_transfer))
@@ -106,7 +106,9 @@ Read-Only:
 
 Optional:
 
+- `expiration_type` (String) Options include `expiring`, `non-expiring`. Whether a refresh token will expire based on an absolute lifetime, after which the token can no longer be used. If rotation is `rotating`, this must be set to `expiring`.
 - `idle_token_lifetime` (Number) The time in seconds after which inactive refresh tokens will expire.
+- `infinite_idle_token_lifetime` (Boolean) Whether inactive refresh tokens should remain valid indefinitely.
 - `infinite_token_lifetime` (Boolean) Whether refresh tokens should remain valid indefinitely. If false, `token_lifetime` should also be set.
 - `leeway` (Number) The amount of time in seconds in which a refresh token may be reused without triggering reuse detection.
 - `rotation_type` (String) Options include `rotating`, `non-rotating`. When `rotating`, exchanging a refresh token will cause a new refresh token to be issued and the existing token will be invalidated. This allows for automatic detection of token reuse if the token is leaked.
@@ -114,8 +116,6 @@ Optional:
 
 Read-Only:
 
-- `expiration_type` (String) Options include `expiring`, `non-expiring`. Whether a refresh token will expire based on an absolute lifetime, after which the token can no longer be used. If rotation is `rotating`, this must be set to `expiring`.
-- `infinite_idle_token_lifetime` (Boolean) Whether inactive refresh tokens should remain valid indefinitely.
 - `policies` (Set of Object) A collection of policies governing multi-resource refresh token exchange (MRRT), defining how refresh tokens can be used across different resource servers (see [below for nested schema](#nestedatt--refresh_token--policies))
 
 <a id="nestedatt--refresh_token--policies"></a>
