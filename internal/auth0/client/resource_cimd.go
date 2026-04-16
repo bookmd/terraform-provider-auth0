@@ -14,13 +14,13 @@ import (
 )
 
 // schemaFields maps field names to their editable definitions.
-// nil entry = editable leaf. Non-nil entry = editable with overrides/children.
+// Nil entry = editable leaf. Non-nil entry = editable with overrides/children.
 // Unlisted fields are made read-only.
 type schemaFields map[string]*schemaFieldDefinition
 
 // schemaFieldDefinition defines overrides and nested editable children for a field.
 type schemaFieldDefinition struct {
-	ValidateFunc     schema.SchemaValidateFunc
+	ValidateDiagFunc schema.SchemaValidateDiagFunc
 	Description      string
 	editableChildren schemaFields
 }
@@ -42,8 +42,8 @@ var cmidEditableSchemaDefinitions = schemaFields{
 	"client_metadata":             nil,
 	"require_proof_of_possession": nil,
 	"app_type": {
-		Description:  "Type of application the client represents. CIMD clients only support `native`, `spa`, and `regular_web`.",
-		ValidateFunc: validation.StringInSlice([]string{"native", "regular_web", "spa"}, false),
+		Description:      "Type of application the client represents. CIMD clients only support `native`, `spa`, and `regular_web`.",
+		ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"native", "regular_web", "spa"}, false)),
 	},
 	"default_organization": nil,
 	"token_quota":          nil,
@@ -51,8 +51,8 @@ var cmidEditableSchemaDefinitions = schemaFields{
 		editableChildren: schemaFields{
 			"lifetime_in_seconds": nil,
 			"alg": {
-				Description:  "Algorithm used to sign JWTs. CIMD clients support `RS256`, `RS512`, and `PS256` (asymmetric only).",
-				ValidateFunc: validation.StringInSlice([]string{"RS256", "RS512", "PS256"}, false),
+				Description:      "Algorithm used to sign JWTs. CIMD clients support `RS256`, `RS512`, and `PS256` (asymmetric only).",
+				ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"RS256", "RS512", "PS256"}, false)),
 			},
 		},
 	},
@@ -64,8 +64,8 @@ var cmidEditableSchemaDefinitions = schemaFields{
 			"infinite_token_lifetime": nil,
 			"idle_token_lifetime":     nil,
 			"expiration_type": {
-				Description:  "Must be `expiring` for CIMD clients. Required in PATCH body when refresh_token is present.",
-				ValidateFunc: validation.StringInSlice([]string{"expiring"}, false),
+				Description:      "Must be `expiring` for CIMD clients. Required in PATCH body when refresh_token is present.",
+				ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"expiring"}, false)),
 			},
 			"infinite_idle_token_lifetime": {
 				Description: "Whether inactive refresh tokens should remain valid indefinitely." +
@@ -135,8 +135,9 @@ func updateSchemaProperties(schemas map[string]*schema.Schema, editable schemaFi
 		if entry.Description != "" {
 			field.Description = entry.Description
 		}
-		if entry.ValidateFunc != nil {
-			field.ValidateFunc = entry.ValidateFunc
+		if entry.ValidateDiagFunc != nil {
+			field.ValidateFunc = nil
+			field.ValidateDiagFunc = entry.ValidateDiagFunc
 		}
 		if entry.editableChildren != nil {
 			if nestedResource, ok := field.Elem.(*schema.Resource); ok {
