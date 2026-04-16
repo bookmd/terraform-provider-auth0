@@ -13,7 +13,70 @@ import (
 	internalError "github.com/auth0/terraform-provider-auth0/internal/error"
 )
 
-// NewCIMDResource will return a new auth0_client_cimd resource.
+// schemaFields maps field names to their editable definitions.
+// nil entry = editable leaf. Non-nil entry = editable with overrides/children.
+// Unlisted fields are made read-only.
+type schemaFields map[string]*schemaFieldDefinition
+
+// schemaFieldDefinition defines overrides and nested editable children for a field.
+type schemaFieldDefinition struct {
+	ValidateFunc     schema.SchemaValidateFunc
+	Description      string
+	editableChildren schemaFields
+}
+
+// cmidEditableSchemaDefinitions defines PATCHable fields for CIMD clients.
+var cmidEditableSchemaDefinitions = schemaFields{
+	"allowed_origins": nil,
+	"description":     nil,
+	"oidc_conformant": {
+		Description: "Indicates whether this client will conform to strict OIDC specifications." +
+			"Must be `true` for CIMD clients.",
+	},
+	"organization_discovery_methods": nil,
+	"web_origins":                    nil,
+	"grant_types": {
+		Description: "Types of grants that this client is authorized to use." +
+			"Only `authorization_code` and `refresh_token` are supported for CIMD clients.",
+	},
+	"client_metadata":             nil,
+	"require_proof_of_possession": nil,
+	"app_type": {
+		Description:  "Type of application the client represents. CIMD clients only support `native`, `spa`, and `regular_web`.",
+		ValidateFunc: validation.StringInSlice([]string{"native", "regular_web", "spa"}, false),
+	},
+	"default_organization": nil,
+	"token_quota":          nil,
+	"jwt_configuration": {
+		editableChildren: schemaFields{
+			"lifetime_in_seconds": nil,
+			"alg": {
+				Description:  "Algorithm used to sign JWTs. CIMD clients support `RS256`, `RS512`, and `PS256` (asymmetric only).",
+				ValidateFunc: validation.StringInSlice([]string{"RS256", "RS512", "PS256"}, false),
+			},
+		},
+	},
+	"refresh_token": {
+		editableChildren: schemaFields{
+			"rotation_type":           nil,
+			"leeway":                  nil,
+			"token_lifetime":          nil,
+			"infinite_token_lifetime": nil,
+			"idle_token_lifetime":     nil,
+			"expiration_type": {
+				Description:  "Must be `expiring` for CIMD clients. Required in PATCH body when refresh_token is present.",
+				ValidateFunc: validation.StringInSlice([]string{"expiring"}, false),
+			},
+			"infinite_idle_token_lifetime": {
+				Description: "Whether inactive refresh tokens should remain valid indefinitely." +
+					"Must be `false` for CIMD clients.",
+			},
+		},
+	},
+	"skip_non_verifiable_callback_uri_confirmation_prompt": nil,
+}
+
+// NewCIMDResource returns a new auth0_client_cimd resource.
 func NewCIMDResource() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: createCIMDClient,
@@ -32,46 +95,15 @@ func NewCIMDResource() *schema.Resource {
 	}
 }
 
-// cimdClientSchema derives the CIMD schema from auth0_client.
-// CIMD clients are Strict 3P (third_party_security_mode: "strict") with an
-// additional blocklist. PATCHable = (Strict 3P Allowlist) − (CIMD_PATCH_BLOCKED_FIELDS).
-// See CIMD_DESIGN_DECISIONS.md for sources and API test evidence.
+// cimdClientSchema derives the CIMD schema from auth0_client by applying
+// cmidEditableSchemaDefinitions and adding the external_client_id field.
 func cimdClientSchema() map[string]*schema.Schema {
-	base := NewResource().Schema
+	baseSchema := NewResource().Schema
 
-	// PATCHable top-level fields. Sub-fields of jwt_configuration and
-	// refresh_token are restricted separately below via sub-field allowlists.
-	// Note: redirection_policy is PATCHable but not yet in the go-auth0 SDK.
-	cimdEditable := map[string]bool{
-		"allowed_origins":                true,
-		"app_type":                       true,
-		"description":                    true,
-		"oidc_conformant":                true,
-		"organization_discovery_methods": true,
-		"web_origins":                    true,
-		"grant_types":                    true,
-		"client_metadata":                true,
-		"default_organization":           true,
-		"require_proof_of_possession":    true,
-		"token_quota":                    true,
-		"jwt_configuration":              true,
-		"refresh_token":                  true,
-		"skip_non_verifiable_callback_uri_confirmation_prompt": true,
-	}
-
-	for key, s := range base {
-		if cimdEditable[key] {
-			s.Required = false
-			s.Optional = true
-			s.Computed = true
-			s.ForceNew = false
-		} else {
-			makeSchemaReadOnly(s)
-		}
-	}
+	updateSchemaProperties(baseSchema, cmidEditableSchemaDefinitions)
 
 	// Computed in auth0_client → Required+ForceNew for CIMD registration URL.
-	base["external_client_id"] = &schema.Schema{
+	baseSchema["external_client_id"] = &schema.Schema{
 		Type:     schema.TypeString,
 		Required: true,
 		ForceNew: true,
@@ -80,59 +112,49 @@ func cimdClientSchema() map[string]*schema.Schema {
 			"This value is immutable after creation.",
 	}
 
-	// CIMD only supports native, regular_web, spa (API rejects others).
-	base["app_type"].ValidateFunc = validation.StringInSlice([]string{"native", "regular_web", "spa"}, false)
-	base["app_type"].Description = "Type of application the client represents. " +
-		"CIMD clients only support `native`, `spa`, and `regular_web`."
-
-	// The jwt_configuration: only lifetime_in_seconds and alg are PATCHable.
-	jwtEditable := map[string]bool{
-		"lifetime_in_seconds": true,
-		"alg":                 true,
-	}
-	jwtSub := base["jwt_configuration"].Elem.(*schema.Resource).Schema
-	for key, s := range jwtSub {
-		if !jwtEditable[key] {
-			makeSchemaReadOnly(s)
-		}
-	}
-	// CIMD restricts alg to asymmetric algorithms (no HS256).
-	jwtSub["alg"].Computed = true
-	jwtSub["alg"].ValidateFunc = validation.StringInSlice([]string{"RS256", "RS512", "PS256"}, false)
-	jwtSub["alg"].Description = "Algorithm used to sign JWTs. " +
-		"CIMD clients support `RS256`, `RS512`, and `PS256` (asymmetric only)."
-
-	// The refresh_token has 5 sub-fields are PATCHable. The expiration_type and
-	// infinite_idle_token_lifetime are fixed-value for Strict 3P ("expiring"
-	// and false) but the API requires them when refresh_token is in the PATCH.
-	rtEditable := map[string]bool{
-		"rotation_type":                true,
-		"leeway":                       true,
-		"token_lifetime":               true,
-		"infinite_token_lifetime":      true,
-		"idle_token_lifetime":          true,
-		"expiration_type":              true,
-		"infinite_idle_token_lifetime": true,
-	}
-	rtSub := base["refresh_token"].Elem.(*schema.Resource).Schema
-	for key, s := range rtSub {
-		if !rtEditable[key] {
-			makeSchemaReadOnly(s)
-		}
-	}
-	// The rotation_type and expiration_type are Required in auth0_client but
-	// Optional for CIMD (server sets defaults from CIMD metadata).
-	rtSub["rotation_type"].Required = false
-	rtSub["rotation_type"].Optional = true
-	rtSub["rotation_type"].Computed = true
-	rtSub["expiration_type"].Required = false
-	rtSub["expiration_type"].Optional = true
-	rtSub["expiration_type"].Computed = true
-
-	return base
+	return baseSchema
 }
 
-// makeSchemaReadOnly recursively sets a field and nested sub-fields to Computed-only.
+// updateSchemaProperties applies the editable allowlist to a schema map.
+// Listed fields become Optional+Computed with any overrides applied.
+// Unlisted fields (and their children) become read-only.
+func updateSchemaProperties(schemas map[string]*schema.Schema, editable schemaFields) {
+	for key, field := range schemas {
+		entry, isEditable := editable[key]
+		if !isEditable {
+			makeSchemaReadOnly(field)
+			continue
+		}
+
+		makeSchemaEditable(field)
+
+		if entry == nil {
+			continue
+		}
+
+		if entry.Description != "" {
+			field.Description = entry.Description
+		}
+		if entry.ValidateFunc != nil {
+			field.ValidateFunc = entry.ValidateFunc
+		}
+		if entry.editableChildren != nil {
+			if nestedResource, ok := field.Elem.(*schema.Resource); ok {
+				updateSchemaProperties(nestedResource.Schema, entry.editableChildren)
+			}
+		}
+	}
+}
+
+// makeSchemaEditable marks a field as Optional+Computed.
+func makeSchemaEditable(s *schema.Schema) {
+	s.Required = false
+	s.Optional = true
+	s.Computed = true
+	s.ForceNew = false
+}
+
+// makeSchemaReadOnly recursively marks a field and its children as Computed-only.
 func makeSchemaReadOnly(s *schema.Schema) {
 	s.Required = false
 	s.Optional = false
@@ -159,7 +181,6 @@ func makeSchemaReadOnly(s *schema.Schema) {
 func createCIMDClient(ctx context.Context, data *schema.ResourceData, meta any) diag.Diagnostics {
 	apiv2 := meta.(*config.Config).GetAPIV2()
 
-	// Register via CIMD endpoint (v2 SDK).
 	externalClientID := data.Get("external_client_id").(string)
 
 	req := &managementv2.RegisterCimdClientRequestContent{}
@@ -177,7 +198,7 @@ func createCIMDClient(ctx context.Context, data *schema.ResourceData, meta any) 
 
 	data.SetId(clientID)
 
-	// PATCH editable fields via v1 SDK (reuses expandClient).
+	// PATCH editable fields via v1 SDK.
 	api := meta.(*config.Config).GetAPI()
 
 	client, err := expandClient(data)
@@ -185,14 +206,10 @@ func createCIMDClient(ctx context.Context, data *schema.ResourceData, meta any) 
 		return diag.FromErr(err)
 	}
 
-	// The expandClient sets TokenEndpointAuthMethod when IsNewResource() is true
-	// TokenEndpointAuthMethod is a CIMD-blocked field. We clear it here
-	// rather than modifying expandClient to avoid coupling expand.go to
-	// CIMD-specific logic.
+	// Clear CIMD-blocked field set by expandClient for new resources.
 	client.TokenEndpointAuthMethod = nil
 
-	// Skip PATCH if expandClient produced an empty struct (user only set
-	// external_client_id with no editable fields).
+	// Skip PATCH if no editable fields were set.
 	if clientHasChange(client) {
 		if err := api.Client.Update(ctx, data.Id(), client); err != nil {
 			return diag.FromErr(internalError.HandleAPIError(data, err))

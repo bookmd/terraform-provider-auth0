@@ -27,9 +27,9 @@ Requires the `client_id_metadata_document_supported` tenant setting to be enable
 - `client_metadata` (Map of String) Metadata associated with the client, in the form of an object with string values (max 255 chars). Maximum of 10 metadata properties allowed. Field names (max 255 chars) are alphanumeric and may only include the following special characters: `:,-+=_*?"/\()<>@ [Tab] [Space]`.
 - `default_organization` (Block List, Max: 1) Configure and associate an organization with the Client (see [below for nested schema](#nestedblock--default_organization))
 - `description` (String) Description of the purpose of the client.
-- `grant_types` (List of String) Types of grants that this client is authorized to use.
+- `grant_types` (List of String) Types of grants that this client is authorized to use.Only `authorization_code` and `refresh_token` are supported for CIMD clients.
 - `jwt_configuration` (Block List, Max: 1) Configuration settings for the JWTs issued for this client. (see [below for nested schema](#nestedblock--jwt_configuration))
-- `oidc_conformant` (Boolean) Indicates whether this client will conform to strict OIDC specifications.
+- `oidc_conformant` (Boolean) Indicates whether this client will conform to strict OIDC specifications.Must be `true` for CIMD clients.
 - `organization_discovery_methods` (List of String) Methods for discovering organizations during the pre_login_prompt. Can include `email` (allows users to find their organization by entering their email address) and/or `organization_name` (requires users to enter the organization name directly). These methods can be combined. Setting this property requires that `organization_require_behavior` is set to `pre_login_prompt`.
 - `refresh_token` (Block List, Max: 1) Configuration settings for the refresh tokens issued for this client. (see [below for nested schema](#nestedblock--refresh_token))
 - `require_proof_of_possession` (Boolean) Makes the use of Proof-of-Possession mandatory for this client.
@@ -106,9 +106,9 @@ Read-Only:
 
 Optional:
 
-- `expiration_type` (String) Options include `expiring`, `non-expiring`. Whether a refresh token will expire based on an absolute lifetime, after which the token can no longer be used. If rotation is `rotating`, this must be set to `expiring`.
+- `expiration_type` (String) Must be `expiring` for CIMD clients. Required in PATCH body when refresh_token is present.
 - `idle_token_lifetime` (Number) The time in seconds after which inactive refresh tokens will expire.
-- `infinite_idle_token_lifetime` (Boolean) Whether inactive refresh tokens should remain valid indefinitely.
+- `infinite_idle_token_lifetime` (Boolean) Whether inactive refresh tokens should remain valid indefinitely.Must be `false` for CIMD clients.
 - `infinite_token_lifetime` (Boolean) Whether refresh tokens should remain valid indefinitely. If false, `token_lifetime` should also be set.
 - `leeway` (Number) The amount of time in seconds in which a refresh token may be reused without triggering reuse detection.
 - `rotation_type` (String) Options include `rotating`, `non-rotating`. When `rotating`, exchanging a refresh token will cause a new refresh token to be issued and the existing token will be invalidated. This allows for automatic detection of token reuse if the token is leaked.
