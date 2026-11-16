@@ -43,6 +43,7 @@ data "auth0_tenant" "my_tenant" {}
 - `phone_consolidated_experience` (Boolean) When enabled, the tenant-level Phone Provider is used for Multi-Factor Authentication (MFA) and Passwordless phone notifications.
 - `picture_url` (String) URL of logo to be shown for the tenant. Recommended size is 150px x 150px. If no URL is provided, the Auth0 logo will be used.
 - `pushed_authorization_requests_supported` (Boolean) Enable pushed authorization requests.
+- `resource_parameter_profile` (String) Determines how the protected resource is identified in OAuth requests. Set to `audience` to use the `audience` parameter, or `compatibility` to also accept the RFC 8707 `resource` parameter.
 - `sandbox_version` (String) Selected sandbox version for the extensibility environment, which allows you to use custom scripts to extend parts of Auth0's functionality.
 - `session_cookie` (List of Object) Alters behavior of tenant's session cookie. Contains a single `mode` property. (see [below for nested schema](#nestedatt--session_cookie))
 - `session_lifetime` (Number) Number of hours during which a session will stay valid.

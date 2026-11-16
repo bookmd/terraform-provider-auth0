@@ -1,4 +1,7 @@
-## Unreleased (bookmd fork — v1.43.0-bookmd.1)
+## Unreleased (bookmd fork — v1.43.0-bookmd.2)
+
+FEATURES:
+- `resource/auth0_tenant` – Add `resource_parameter_profile` (`audience` or `compatibility`).
 
 BUG FIXES:
 - `resource/auth0_client_grant` – Make `createClientGrant`'s existing-grant adoption subject_type-aware. Previously, when a grant already existed for the same `(client_id, audience)`, the provider would adopt `grantList.ClientGrants[0]` regardless of its `subject_type`, silently dropping the user-configured `subject_type` (e.g. two resources configured with `subject_type = "client"` and `subject_type = "user"` collapsed onto the same grant id). The fix walks the existing grants and only adopts one whose `subject_type` matches the configuration (with empty normalized to `"client"` per the schema default); otherwise a new grant is created. This is a bookmd fork patch carried ahead of an upstream PR (TODO: link upstream PR once submitted).
