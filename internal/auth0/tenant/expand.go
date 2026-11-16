@@ -44,6 +44,7 @@ func expandTenant(data *schema.ResourceData) *management.Tenant {
 		DefaultTokenQuota:                    expandDefaultTokenQuota(data),
 		SkipNonVerifiableCallbackURIConfirmationPrompt: value.BoolPtr(data.Get("skip_non_verifiable_callback_uri_confirmation_prompt")),
 		PhoneConsolidatedExperience:                    value.Bool(config.GetAttr("phone_consolidated_experience")),
+		ResourceParameterProfile:                       value.String(config.GetAttr("resource_parameter_profile")),
 	}
 
 	if data.IsNewResource() || data.HasChange("idle_session_lifetime") {

@@ -464,6 +464,14 @@ func NewResource() *schema.Resource {
 				Computed:    true,
 				Description: "When enabled, the tenant-level Phone Provider is used for Multi-Factor Authentication (MFA) and Passwordless phone notifications.",
 			},
+			"resource_parameter_profile": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				Computed:     true,
+				ValidateFunc: validation.StringInSlice([]string{"audience", "compatibility"}, false),
+				Description: "Determines how the protected resource is identified in OAuth requests. " +
+					"Set to `audience` to use the `audience` parameter, or `compatibility` to also accept the RFC 8707 `resource` parameter.",
+			},
 		},
 	}
 }

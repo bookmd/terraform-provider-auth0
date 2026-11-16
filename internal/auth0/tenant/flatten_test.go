@@ -66,6 +66,15 @@ func TestFlattenTenant(t *testing.T) {
 		assert.Equal(t, mockResourceData.Get("acr_values_supported").(*schema.Set).Len(), 0)
 	})
 
+	t.Run("it sets resource_parameter_profile from the remote tenant", func(t *testing.T) {
+		tenant := management.Tenant{ResourceParameterProfile: auth0.String("compatibility")}
+
+		err := flattenTenant(mockResourceData, &tenant)
+
+		assert.NoError(t, err)
+		assert.Equal(t, "compatibility", mockResourceData.Get("resource_parameter_profile"))
+	})
+
 	t.Run("it sets enable_endpoint_aliases if remote tenant has valid value set", func(t *testing.T) {
 		tenant := management.Tenant{
 			MTLS: &management.TenantMTLSConfiguration{
